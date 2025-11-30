@@ -1,10 +1,5 @@
 import { requireAdmin } from '@/app/api/admin/_lib/requireAdmin'
-import { createClient } from '@supabase/supabase-js'
-
-
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const admin = createClient(URL, SRK, { auth: { persistSession: false } })
+import { getSbAdmin } from '@/app/api/admin/_lib/requireAdmin'
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
@@ -20,6 +15,8 @@ export async function POST(req: Request) {
   // Bearer/Cookie 両対応のゲート（req を渡すのを忘れない）
   const gate = await requireAdmin(req)
   if (gate instanceof Response) return gate  // 401/403
+
+  const admin = getSbAdmin()
 
   // ここから先は admin を使う
   const body = await req.json().catch(() => ({}))

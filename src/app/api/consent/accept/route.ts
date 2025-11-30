@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/app/api/_lib/sbServer'
-import { sbAdmin } from '@/app/api/admin/_lib/requireAdmin'
+import { getSbAdmin } from '@/app/api/admin/_lib/requireAdmin'
 
 const CONSENT_VERSION = 'v1'
 const CONSENT_TEXT_HASH = 'sha256:xxxxxxxx'
@@ -28,6 +28,7 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   }
 
+  const sbAdmin = getSbAdmin()
   await sbAdmin.from('audit_log').insert({
     user_id: user.id,
     action: 'consent.accepted',

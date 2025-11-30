@@ -2,13 +2,15 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const sb = createClient(
-  process.env.SUPABASE_URL!,                // server-only
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,   // server-only
-  { auth: { persistSession: false } }
-)
-
 export async function GET() {
+  const URL = process.env.SUPABASE_URL
+  const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!URL || !SRK) {
+    return new NextResponse('Supabase env missing', { status: 500 })
+  }
+
+  const sb = createClient(URL, SRK, { auth: { persistSession: false } })
+
   // 1) ビューから取得
   const { data, error } = await sb.from('meal_analysis_csv').select('*').order('meal_id', { ascending: true })
   if (error) return new NextResponse(error.message, { status: 500 })

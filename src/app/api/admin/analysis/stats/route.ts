@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, sbAdmin } from '@/app/api/admin/_lib/requireAdmin'
+import { requireAdmin, getSbAdmin } from '@/app/api/admin/_lib/requireAdmin'
 
 const ERROR_STATUSES = ['error', 'failed']
 const PENDING_STATUSES = ['queued', 'processing']
@@ -74,6 +74,8 @@ export async function GET(req: NextRequest) {
     searchParams.get('start'),
     searchParams.get('end')
   )
+
+  const sbAdmin = getSbAdmin()
 
   const [totalsRes, errorRowsRes, pendingRowsRes] = await Promise.all([
     sbAdmin.rpc('count_job_status_by_range', {

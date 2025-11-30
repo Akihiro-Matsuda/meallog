@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
-import { sbAdmin } from '@/lib/supabaseAdmin'
+import { getSbAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET() {
   const since = new Date(Date.now() - 7 * 86400000).toISOString() // 直近7日
+
+  const sbAdmin = getSbAdmin()
 
   const [doneCnt, errCnt, queuedCnt] = await Promise.all([
     sbAdmin.from('meal_image_analysis').select('image_id', { count: 'exact', head: true }).gte('ran_at', since).eq('status', 'done'),

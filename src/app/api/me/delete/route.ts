@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/app/api/_lib/sbServer'
-import { sbAdmin } from '@/app/api/admin/_lib/requireAdmin'
+import { getSbAdmin } from '@/app/api/admin/_lib/requireAdmin'
 
 export async function POST() {
   const sb = await getServerSupabase()
@@ -20,6 +20,7 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   }
 
+  const sbAdmin = getSbAdmin()
   await sbAdmin.from('audit_log').insert({
     user_id: user.id,
     action: 'account.delete',

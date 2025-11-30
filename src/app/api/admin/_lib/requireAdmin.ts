@@ -1,15 +1,16 @@
-import { redirect } from 'next/navigation'
 import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getServerSupabase } from '@/app/api/_lib/sbServer'
-import { headers } from 'next/headers';
+import { headers } from 'next/headers'
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-export const sbAdmin = createServiceClient(URL, SRK, {
-  auth: { persistSession: false },
-})
+export function getSbAdmin() {
+  const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!URL || !SRK) {
+    throw new Error('Supabase admin env missing')
+  }
+  return createServiceClient(URL, SRK, { auth: { persistSession: false } })
+}
 
 export async function requireAdmin(req?: Request) {
   const sb = await getServerSupabase();
@@ -48,6 +49,7 @@ export async function requireAdmin(req?: Request) {
   }
 
   // 4) 管理者チェック（service-role で RLS 無視）
+  const sbAdmin = getSbAdmin()
   const { data: prof } = await sbAdmin
     .from('profiles')
     .select('role,is_admin')

@@ -11,11 +11,12 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!
 )
 
-const sb = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // server-only
-  { auth: { persistSession: false } }
-)
+function getServiceClient() {
+  const URL = process.env.SUPABASE_URL
+  const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!URL || !SRK) throw new Error('Supabase env missing')
+  return createClient(URL, SRK, { auth: { persistSession: false } })
+}
 
 type Sub = { endpoint: string; keys: any }
 type ProfileRow = {
@@ -40,6 +41,8 @@ async function runSendDue(opts: { windowMin?: number; force?: boolean } = {}) {
   const force = opts.force ?? false
   const nowUtc = new Date()
   let sent = 0, removedInvalid = 0, dueUsers = 0
+
+  const sb = getServiceClient()
 
   // 1) profiles を取得（埋め込みなし）
   const { data: profiles, error: profErr } = await sb

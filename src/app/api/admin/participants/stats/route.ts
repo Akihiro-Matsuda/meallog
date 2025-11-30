@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, sbAdmin } from '@/app/api/admin/_lib/requireAdmin'
+import { requireAdmin, getSbAdmin } from '@/app/api/admin/_lib/requireAdmin'
 
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req)
@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'start/end are required' }, { status: 400 })
   }
 
+  const sbAdmin = getSbAdmin()
   const { data, error } = await sbAdmin.rpc('admin_participant_stats', {
     start_date: start,
     end_date: end,

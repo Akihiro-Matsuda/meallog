@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, sbAdmin } from '@/app/api/admin/_lib/requireAdmin'
+import { requireAdmin, getSbAdmin } from '@/app/api/admin/_lib/requireAdmin'
 
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req)
@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const date = url.searchParams.get('date') ?? undefined
   const format = url.searchParams.get('format')
 
+  const sbAdmin = getSbAdmin()
   const { data, error } = await sbAdmin.rpc(
     'admin_missing_today',
     date ? { tgt_date: date } : {}

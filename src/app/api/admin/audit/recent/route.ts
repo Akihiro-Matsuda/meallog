@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { requireAdmin, sbAdmin } from '@/app/api/admin/_lib/requireAdmin'
+import { requireAdmin, getSbAdmin } from '@/app/api/admin/_lib/requireAdmin'
 
 export async function GET(req: Request) {
   const gate = await requireAdmin(req)
   if (gate instanceof Response) return gate
 
+  const sbAdmin = getSbAdmin()
   const { data, error } = await sbAdmin
     .from('audit_log')
     .select('*')

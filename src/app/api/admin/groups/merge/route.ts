@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { sbAdmin } from '@/lib/supabaseAdmin'
+import { getSbAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +11,8 @@ export async function POST(req: Request) {
     }
 
     // 指定がなければ先頭 meal の group を代表に
+    const sbAdmin = getSbAdmin()
+
     let groupId = target_group_id
     if (!groupId) {
       const { data: m } = await sbAdmin.from('meals')

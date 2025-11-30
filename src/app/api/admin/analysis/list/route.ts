@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { sbAdmin } from '@/lib/supabaseAdmin'
+import { getSbAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET() {
+  const sbAdmin = getSbAdmin()
   const { data, error } = await sbAdmin
     .from('meal_image_analysis')
     .select(`
