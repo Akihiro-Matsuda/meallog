@@ -5,17 +5,18 @@ import webpush from 'web-push'
 import { createClient } from '@supabase/supabase-js'
 import { toZonedTime, formatInTimeZone } from 'date-fns-tz'
 
-webpush.setVapidDetails(
-  'mailto:example@example.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
 function getServiceClient() {
   const URL = process.env.SUPABASE_URL
   const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!URL || !SRK) throw new Error('Supabase env missing')
   return createClient(URL, SRK, { auth: { persistSession: false } })
+}
+
+function ensureVapid() {
+  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const priv = process.env.VAPID_PRIVATE_KEY
+  if (!pub || !priv) throw new Error('VAPID env missing')
+  webpush.setVapidDetails('mailto:example@example.com', pub, priv)
 }
 
 type Sub = { endpoint: string; keys: any }
@@ -43,6 +44,7 @@ async function runSendDue(opts: { windowMin?: number; force?: boolean } = {}) {
   let sent = 0, removedInvalid = 0, dueUsers = 0
 
   const sb = getServiceClient()
+  ensureVapid()
 
   // 1) profiles を取得（埋め込みなし）
   const { data: profiles, error: profErr } = await sb
