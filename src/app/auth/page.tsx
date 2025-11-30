@@ -1,10 +1,12 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 
-export default function AuthPage() {
+function AuthPageInner() {
   const router = useRouter()
   const params = useSearchParams()
   const redirectTo = params.get('redirect') || '/admin/analysis'
@@ -93,5 +95,13 @@ export default function AuthPage() {
         After sign-in you will be redirected to: <code>{redirectTo}</code>
       </p>
     </main>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 16 }}>Loading…</div>}>
+      <AuthPageInner />
+    </Suspense>
   )
 }
