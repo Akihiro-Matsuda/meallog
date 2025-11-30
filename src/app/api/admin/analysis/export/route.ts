@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/app/api/admin/_lib/requireAdmin'
 import { createClient } from '@supabase/supabase-js'
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-// 各ルートで必ず自前生成（RLS無視で確実に動かす）
-const admin = createClient(URL, SRK, { auth: { persistSession: false } })
-
 // JST の日付範囲（start/end は 'YYYY-MM-DD' 文字列、未指定なら今日）
 function jstRange(start?: string | null, end?: string | null) {
   // "YYYY-MM-DD" → JST の 00:00 を基準に UTC ISO 範囲へ
@@ -48,6 +42,15 @@ export async function GET(req: Request) {
   // Bearer / Cookie 両対応のゲート（req を渡すのを忘れない）
   const gate = await requireAdmin(req)
   if (gate instanceof Response) return gate // 401/403 をそのまま返す
+
+  const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!URL || !SRK) {
+    return new NextResponse('Supabase env missing', { status: 500 })
+  }
+
+  // 各リクエストごとに service-role クライアントを生成（トップレベル評価を避ける）
+  const admin = createClient(URL, SRK, { auth: { persistSession: false } })
 
   const url = new URL(req.url)
   const start = url.searchParams.get('start') // 'YYYY-MM-DD' 省略可
