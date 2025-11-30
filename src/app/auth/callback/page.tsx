@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -10,7 +10,7 @@ function parseHashParams(hash: string): Record<string, string> {
   return Object.fromEntries(new URLSearchParams(h).entries())
 }
 
-export default function CallbackPage() {
+function CallbackPageInner() {
   const router = useRouter()
   const params = useSearchParams()
   const [message, setMessage] = useState('ログイン処理中…')
@@ -64,4 +64,12 @@ export default function CallbackPage() {
   }, [params, router])
 
   return <div className="p-6">{message}</div>
+}
+
+export default function CallbackPage() {
+  return (
+    <Suspense fallback={<div className="p-6">ログイン処理中…</div>}>
+      <CallbackPageInner />
+    </Suspense>
+  )
 }
