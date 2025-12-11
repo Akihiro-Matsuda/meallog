@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 
 const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
@@ -101,24 +100,41 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">通知設定</h1>
-      <p className="text-sm text-gray-600">状態: {status}</p>
+    <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
+      <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">settings</p>
+          <h1 className="text-2xl font-bold text-slate-900">通知設定</h1>
+          <p className="text-sm text-slate-700">
+            リマインドを受け取るために通知を許可してください。
+          </p>
+        </div>
 
-      <div className="flex gap-2">
-        <button onClick={subscribe} disabled={loading} className="rounded bg-black text-white px-3 py-2">
-          許可して購読する
-        </button>
-        <button onClick={unsubscribe} disabled={loading} className="rounded border px-3 py-2">
-          購読解除
-        </button>
-        <button onClick={sendTest} disabled={loading || !sub} className="rounded border px-3 py-2">
-          テスト送信
-        </button>
+        <div className="rounded-2xl border border-amber-200 bg-white/90 p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-800">現在の状態</p>
+            <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">{status}</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button onClick={subscribe} disabled={loading} className="w-full rounded-lg bg-amber-500 text-white px-3 py-3 font-semibold hover:bg-amber-600 disabled:opacity-60 transition">
+              通知を許可
+            </button>
+            <button onClick={unsubscribe} disabled={loading} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 hover:border-amber-400 transition">
+              通知を解除
+            </button>
+            <button onClick={sendTest} disabled={loading || !sub} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 hover:border-amber-400 disabled:opacity-60 transition">
+              テスト送信
+            </button>
+          </div>
+
+          {err && <p className="text-red-700 text-sm">{err}</p>}
+        </div>
+
+        <div className="text-left text-xs text-slate-500">
+          iOS SafariではインストールしたWebアプリ（ホーム画面追加）でのみ通知を受け取れるなど、端末によって挙動が異なります。
+        </div>
       </div>
-
-      {err && <p className="text-red-700 text-sm">{err}</p>}
-      <div className="pt-4"><Link href="/" className="underline text-blue-600">ホームへ</Link></div>
-    </div>
+    </main>
   )
 }

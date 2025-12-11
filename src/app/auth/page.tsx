@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
+import Link from 'next/link'
 
 function AuthPageInner() {
   const router = useRouter()
@@ -59,41 +60,69 @@ function AuthPageInner() {
   }
 
   return (
-    <main style={{ maxWidth: 360, margin: '64px auto', padding: 16 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700 }}>Sign in (Admin)</h1>
+    <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
+      <div className="mx-auto max-w-md px-5 py-8 space-y-6">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">admin</p>
+          <h1 className="text-2xl font-bold text-slate-900">MealLog MVP</h1>
+          <p className="text-sm text-slate-600">
+            管理者用のサインイン。メールとパスワードを入力してください。
+          </p>
+        </div>
 
-      <form onSubmit={signInWithPassword} style={{ display: 'grid', gap: 12, marginTop: 16 }}>
-        <input
-          type="email"
-          placeholder="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ padding: 8, border: '1px solid #ccc', borderRadius: 8 }}
-        />
-        <input
-          type="password"
-          placeholder="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ padding: 8, border: '1px solid #ccc', borderRadius: 8 }}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: '10px 12px', borderRadius: 8, background: '#111', color: '#fff' }}
-        >
-          {loading ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
+        <div className="rounded-2xl border border-amber-200 bg-white/80 p-5 shadow-sm space-y-4">
+          <form onSubmit={signInWithPassword} className="space-y-4">
+            <label className="block text-sm font-medium text-slate-800">
+              メールアドレス
+              <input
+                type="email"
+                placeholder="admin@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-800">
+              パスワード
+              <input
+                type="password"
+                placeholder="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 disabled:opacity-60 transition"
+            >
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
 
-      <button onClick={signOut} style={{ marginTop: 12 }}>Sign out</button>
+          <button
+            type="button"
+            onClick={signOut}
+            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:border-amber-400 transition"
+          >
+            Sign out
+          </button>
 
-      {msg && <p style={{ marginTop: 12, color: 'crimson' }}>{msg}</p>}
-      <p style={{ marginTop: 12, fontSize: 12, color: '#666' }}>
-        After sign-in you will be redirected to: <code>{redirectTo}</code>
-      </p>
+          {msg && <p className="text-sm text-red-600">{msg}</p>}
+          <p className="text-xs text-slate-600">
+            After sign-in you will be redirected to: <code>{redirectTo}</code>
+          </p>
+        </div>
+
+        <div className="text-center">
+          <Link href="/" className="text-sm text-slate-600 underline decoration-amber-500 decoration-2 underline-offset-4">
+            ホームに戻る
+          </Link>
+        </div>
+      </div>
     </main>
   )
 }

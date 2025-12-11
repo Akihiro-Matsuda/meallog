@@ -87,77 +87,94 @@ export default function ProfilePage() {
     else setMsg('保存しました')
   }
 
-  if (loading) return <div className="p-6">読み込み中…</div>
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50 flex items-center justify-center">
+        <p className="text-sm text-slate-600">読み込み中…</p>
+      </main>
+    )
+  }
 
   if (!userId) {
     return (
-      <div className="p-6 space-y-3">
-        <p>ログインが必要です。</p>
-        <Link href="/sign-in" className="rounded bg-black text-white px-3 py-2 inline-block">
-          サインインへ
-        </Link>
-      </div>
+      <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
+        <div className="mx-auto max-w-xl px-5 py-8 space-y-4">
+          <h1 className="text-2xl font-bold text-slate-900">プロフィール設定</h1>
+          <p className="text-sm text-slate-700">サインインしてプロフィールを管理してください。</p>
+          <Link href="/sign-in" className="block text-center rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 transition">
+            サインインへ
+          </Link>
+        </div>
+      </main>
     )
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-5">
-      <h1 className="text-2xl font-semibold">プロフィール設定</h1>
-      <p className="text-sm text-gray-600">ログイン: {userEmail}</p>
-
-      <form onSubmit={onSave} className="space-y-4">
-        <div>
-          <label className="block text-sm mb-1">タイムゾーン</label>
-          <input
-            type="text"
-            value={timezone}
-            onChange={(e) => setTimezone(e.target.value)}
-            className="w-full rounded border p-2"
-            placeholder="Asia/Tokyo"
-          />
+    <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
+      <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">settings</p>
+          <h1 className="text-2xl font-bold text-slate-900">プロフィール設定</h1>
+          <p className="text-sm text-slate-700">ログイン: {userEmail}</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm mb-1">朝食時刻</label>
-            <input
-              type="time"
-              value={breakfast}
-              onChange={(e) => setBreakfast(e.target.value)}
-              className="w-full rounded border p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-1">昼食時刻</label>
-            <input
-              type="time"
-              value={lunch}
-              onChange={(e) => setLunch(e.target.value)}
-              className="w-full rounded border p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-1">夕食時刻</label>
-            <input
-              type="time"
-              value={dinner}
-              onChange={(e) => setDinner(e.target.value)}
-              className="w-full rounded border p-2"
-            />
-          </div>
-        </div>
+        <form onSubmit={onSave} className="space-y-4 rounded-2xl border border-amber-200 bg-white/90 p-4 shadow-sm">
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-slate-800">
+              タイムゾーン
+              <input
+                type="text"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                placeholder="Asia/Tokyo"
+              />
+            </label>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded bg-black text-white px-4 py-2 disabled:opacity-50"
-        >
-          {saving ? '保存中…' : '保存する'}
-        </button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label className="block text-sm font-medium text-slate-800">
+                朝食時刻
+                <input
+                  type="time"
+                  value={breakfast}
+                  onChange={(e) => setBreakfast(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                />
+              </label>
+              <label className="block text-sm font-medium text-slate-800">
+                昼食時刻
+                <input
+                  type="time"
+                  value={lunch}
+                  onChange={(e) => setLunch(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                />
+              </label>
+              <label className="block text-sm font-medium text-slate-800">
+                夕食時刻
+                <input
+                  type="time"
+                  value={dinner}
+                  onChange={(e) => setDinner(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                />
+              </label>
+            </div>
+          </div>
 
-        {msg && <p className="text-green-700 text-sm">{msg}</p>}
-        {err && <p className="text-red-700 text-sm">{err}</p>}
-      </form>
-    </div>
+          <div className="space-y-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 disabled:opacity-60 transition"
+            >
+              {saving ? '保存中…' : '保存する'}
+            </button>
+            {msg && <p className="text-green-700 text-sm">{msg}</p>}
+            {err && <p className="text-red-700 text-sm">{err}</p>}
+          </div>
+        </form>
+      </div>
+    </main>
   )
 }

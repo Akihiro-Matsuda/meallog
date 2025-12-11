@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
@@ -82,6 +82,11 @@ export default function NewMealPage() {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [camErr, setCamErr] = useState<string | null>(null)
+  const [camBusy, setCamBusy] = useState(false)
+  const [camPreviewUrl, setCamPreviewUrl] = useState<string | null>(null)
+  const [camStream, setCamStream] = useState<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -119,6 +124,83 @@ export default function NewMealPage() {
       const stamp = formatInTimeZone(exifDate, tz, "yyyy-MM-dd'T'HH:mm")
       setTakenLocal(stamp)
     }
+  }
+
+  const stopCamera = () => {
+    camStream?.getTracks().forEach((t) => t.stop())
+    setCamStream(null)
+    const v = videoRef.current
+    if (v) {
+      v.srcObject = null
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      stopCamera()
+      if (camPreviewUrl) URL.revokeObjectURL(camPreviewUrl)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const startCamera = async () => {
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setCamErr('この端末ではカメラを利用できません。')
+      return
+    }
+    setCamErr(null)
+    if (camStream) return
+    setCamBusy(true)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      })
+      setCamStream(stream)
+      const v = videoRef.current
+      if (v) {
+        v.srcObject = stream
+        await v.play()
+      }
+    } catch (e: any) {
+      setCamErr(e?.message ?? 'カメラの起動に失敗しました。')
+    } finally {
+      setCamBusy(false)
+    }
+  }
+
+  const capturePhoto = async () => {
+    setCamErr(null)
+    const v = videoRef.current
+    if (!v) return setCamErr('カメラが起動していません。')
+    const w = v.videoWidth
+    const h = v.videoHeight
+    if (!w || !h) return setCamErr('カメラの準備中です。')
+
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return setCamErr('描画に失敗しました。')
+    ctx.drawImage(v, 0, 0, w, h)
+    const blob: Blob | null = await new Promise((res) => canvas.toBlob((b) => res(b), 'image/jpeg', 0.9))
+    if (!blob) return setCamErr('画像の取得に失敗しました。')
+
+    // BlobをFile化して既存のアップロードフローに渡す
+    const capturedFile = new File([blob], 'camera.jpg', { type: 'image/jpeg' })
+    setCamPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(blob)
+    })
+    await onFileChange(capturedFile)
+  }
+
+  const clearCamPreview = () => {
+    setCamPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+    setFile(null)
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -198,63 +280,157 @@ export default function NewMealPage() {
 
   if (!user) {
     return (
-      <div className="p-6 space-y-3">
-        <p>ログインが必要です。</p>
-        <Link className="rounded bg-black text-white px-3 py-2 inline-block" href="/sign-in">サインインへ</Link>
-      </div>
+      <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
+        <div className="mx-auto max-w-xl px-5 py-8 space-y-4">
+          <h1 className="text-2xl font-bold text-slate-900">食事を記録する</h1>
+          <p className="text-sm text-slate-700">サインインすると撮影とアップロードができます。</p>
+          <Link className="block text-center rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 transition" href="/sign-in">サインインへ</Link>
+        </div>
+      </main>
     )
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-5">
-      <h1 className="text-2xl font-semibold">食事の記録（新規）</h1>
-
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm mb-1">食事区分</label>
-          <select value={mealSlot} onChange={(e) => setMealSlot(e.target.value as MealSlot)} className="w-full rounded border p-2">
-            <option value="breakfast">朝食</option>
-            <option value="lunch">昼食</option>
-            <option value="dinner">夕食</option>
-            <option value="snack">軽食</option>
-            <option value="drink">飲み物</option>
-          </select>
+    <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
+      <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">capture</p>
+          <h1 className="text-2xl font-bold text-slate-900">食事を記録する</h1>
+          <p className="text-sm text-slate-700">食事全体が確認できるように撮影してください。カメラ起動ですぐ撮影できます。</p>
         </div>
 
-        <div>
-          <label className="block text-sm mb-1">撮影日時（ローカル）</label>
-          <input
-            type="datetime-local"
-            value={takenLocal}
-            onChange={(e) => setTakenLocal(e.target.value)}
-            className="w-full rounded border p-2"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            タイムゾーン：{profile?.timezone ?? 'Asia/Tokyo'}（プロフィールで変更可）
-          </p>
-        </div>
+        <form onSubmit={onSubmit} className="space-y-5">
+          <section className="rounded-2xl border border-amber-200 bg-white/80 p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">camera</p>
+                <p className="text-sm text-slate-800">カメラを起動して撮影</p>
+              </div>
+              <span className="text-[11px] text-slate-600 bg-amber-100 px-2 py-1 rounded-full">推奨</span>
+            </div>
 
-        <div>
-          <label className="block text-sm mb-1">画像ファイル</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-            className="w-full"
-          />
-        </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={startCamera}
+                disabled={camBusy || !!camStream}
+                className="flex-1 min-w-[140px] rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 disabled:opacity-60 transition text-center"
+              >
+                {camBusy ? 'カメラ起動中…' : camStream ? 'カメラ起動中' : 'カメラを起動'}
+              </button>
+              <button
+                type="button"
+                onClick={capturePhoto}
+                disabled={!camStream || camBusy}
+                className="flex-1 min-w-[140px] rounded-lg bg-slate-900 text-white px-4 py-3 font-semibold hover:bg-slate-800 disabled:opacity-60 transition text-center"
+              >
+                シャッター
+              </button>
+              <button
+                type="button"
+                onClick={stopCamera}
+                disabled={!camStream}
+                className="rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-amber-400 transition"
+              >
+                カメラ停止
+              </button>
+            </div>
 
-        <button type="submit" disabled={loading} className="rounded bg-black text-white px-4 py-2 disabled:opacity-50">
-          {loading ? '保存中…' : '保存する'}
-        </button>
+            <div className="space-y-2">
+              <div className="rounded-xl overflow-hidden border border-slate-200 bg-black/80">
+                <video
+                  ref={videoRef}
+                  className="w-full h-64 object-cover"
+                  playsInline
+                  muted
+                />
+              </div>
+              {camPreviewUrl && (
+                <div className="space-y-2 relative">
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={clearCamPreview}
+                      className="rounded bg-white/85 px-2 py-1 text-xs border border-slate-200 shadow-sm"
+                    >
+                      再撮影
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      className="rounded bg-slate-900/85 text-white px-2 py-1 text-xs shadow-sm"
+                    >
+                      撮影終了
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-600">直近の撮影プレビュー</p>
+                  <img src={camPreviewUrl} alt="カメラで撮影した画像" className="w-full rounded-lg border border-slate-200" />
+                </div>
+              )}
+              {camErr && <p className="text-sm text-red-700">{camErr}</p>}
+            </div>
+          </section>
 
-        {msg && <p className="text-green-700 text-sm whitespace-pre-wrap">{msg}</p>}
-        {err && <p className="text-red-700 text-sm whitespace-pre-wrap">{err}</p>}
-      </form>
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-800">詳細</h2>
+              <span className="text-[11px] text-slate-500">必須</span>
+            </div>
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-slate-800">
+                食事区分
+                <select value={mealSlot} onChange={(e) => setMealSlot(e.target.value as MealSlot)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 bg-white">
+                  <option value="breakfast">朝食</option>
+                  <option value="lunch">昼食</option>
+                  <option value="dinner">夕食</option>
+                  <option value="snack">軽食</option>
+                  <option value="drink">飲み物</option>
+                </select>
+              </label>
 
-      <div className="pt-4">
-        <Link href="/meals" className="text-blue-600 underline">記録一覧を見る</Link>
+              <label className="block text-sm font-medium text-slate-800">
+                撮影日時（ローカル）
+                <input
+                  type="datetime-local"
+                  value={takenLocal}
+                  onChange={(e) => setTakenLocal(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  タイムゾーン：{profile?.timezone ?? 'Asia/Tokyo'}（プロフィールで変更可）
+                </p>
+              </label>
+
+              <label className="block text-sm font-medium text-slate-800">
+                アップロードから選ぶ（オプション）
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+                  className="mt-1 w-full text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">カメラで撮影できない場合はこちらから選択。</p>
+              </label>
+            </div>
+          </section>
+
+          <div className="space-y-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold text-center hover:bg-amber-600 disabled:opacity-60 transition"
+            >
+              {loading ? '保存中…' : '保存する'}
+            </button>
+            {msg && <p className="text-green-700 text-sm whitespace-pre-wrap">{msg}</p>}
+            {err && <p className="text-red-700 text-sm whitespace-pre-wrap">{err}</p>}
+          </div>
+
+          <div className="text-center">
+            <Link href="/meals" className="text-sm text-slate-600 underline decoration-amber-500 decoration-2 underline-offset-4">記録一覧を見る</Link>
+          </div>
+        </form>
       </div>
-    </div>
+    </main>
   )
 }
