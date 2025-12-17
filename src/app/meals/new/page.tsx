@@ -82,11 +82,9 @@ export default function NewMealPage() {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [camErr, setCamErr] = useState<string | null>(null)
-  const [camBusy, setCamBusy] = useState(false)
   const [camPreviewUrl, setCamPreviewUrl] = useState<string | null>(null)
-  const [camStream, setCamStream] = useState<MediaStream | null>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -116,6 +114,10 @@ export default function NewMealPage() {
 
   const onFileChange = async (f: File | null) => {
     setFile(f)
+    setCamPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return f ? URL.createObjectURL(f) : null
+    })
     if (!f) return
     // EXIFの撮影日時があればフォームへ反映
     const tz = profile?.timezone ?? 'Asia/Tokyo'
@@ -126,81 +128,20 @@ export default function NewMealPage() {
     }
   }
 
-  const stopCamera = () => {
-    camStream?.getTracks().forEach((t) => t.stop())
-    setCamStream(null)
-    const v = videoRef.current
-    if (v) {
-      v.srcObject = null
-    }
-  }
-
   useEffect(() => {
     return () => {
-      stopCamera()
       if (camPreviewUrl) URL.revokeObjectURL(camPreviewUrl)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [camPreviewUrl])
 
-  const startCamera = async () => {
-    if (!navigator?.mediaDevices?.getUserMedia) {
-      setCamErr('この端末ではカメラを利用できません。')
-      return
-    }
-    setCamErr(null)
-    if (camStream) return
-    setCamBusy(true)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
-      setCamStream(stream)
-      const v = videoRef.current
-      if (v) {
-        v.srcObject = stream
-        await v.play()
-      }
-    } catch (e: any) {
-      setCamErr(e?.message ?? 'カメラの起動に失敗しました。')
-    } finally {
-      setCamBusy(false)
-    }
-  }
-
-  const capturePhoto = async () => {
-    setCamErr(null)
-    const v = videoRef.current
-    if (!v) return setCamErr('カメラが起動していません。')
-    const w = v.videoWidth
-    const h = v.videoHeight
-    if (!w || !h) return setCamErr('カメラの準備中です。')
-
-    const canvas = document.createElement('canvas')
-    canvas.width = w
-    canvas.height = h
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return setCamErr('描画に失敗しました。')
-    ctx.drawImage(v, 0, 0, w, h)
-    const blob: Blob | null = await new Promise((res) => canvas.toBlob((b) => res(b), 'image/jpeg', 0.9))
-    if (!blob) return setCamErr('画像の取得に失敗しました。')
-
-    // BlobをFile化して既存のアップロードフローに渡す
-    const capturedFile = new File([blob], 'camera.jpg', { type: 'image/jpeg' })
-    setCamPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev)
-      return URL.createObjectURL(blob)
-    })
-    await onFileChange(capturedFile)
-  }
-
-  const clearCamPreview = () => {
+  const clearSelection = () => {
     setCamPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return null
     })
     setFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -303,71 +244,57 @@ export default function NewMealPage() {
           <section className="rounded-2xl border border-amber-200 bg-white/80 p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">camera</p>
-                <p className="text-sm text-slate-800">カメラを起動して撮影</p>
+                <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">capture</p>
+                <p className="text-sm text-slate-800">カメラで撮影するか、アルバムから選択して下さい。</p>
               </div>
               <span className="text-[11px] text-slate-600 bg-amber-100 px-2 py-1 rounded-full">推奨</span>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={startCamera}
-                disabled={camBusy || !!camStream}
-                className="flex-1 min-w-[140px] rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 disabled:opacity-60 transition text-center"
-              >
-                {camBusy ? 'カメラ起動中…' : camStream ? 'カメラ起動中' : 'カメラを起動'}
-              </button>
-              <button
-                type="button"
-                onClick={capturePhoto}
-                disabled={!camStream || camBusy}
-                className="flex-1 min-w-[140px] rounded-lg bg-slate-900 text-white px-4 py-3 font-semibold hover:bg-slate-800 disabled:opacity-60 transition text-center"
-              >
-                シャッター
-              </button>
-              <button
-                type="button"
-                onClick={stopCamera}
-                disabled={!camStream}
-                className="rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-amber-400 transition"
-              >
-                カメラ停止
-              </button>
-            </div>
-
             <div className="space-y-2">
-              <div className="rounded-xl overflow-hidden border border-slate-200 bg-black/80">
-                <video
-                  ref={videoRef}
-                  className="w-full h-64 object-cover"
-                  playsInline
-                  muted
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+                  className="hidden"
                 />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 transition"
+                >
+                  カメラを起動する
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm hover:border-amber-400 transition"
+                >
+                  画像をアップロードする
+                </button>
               </div>
               {camPreviewUrl && (
-                <div className="space-y-2 relative">
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={clearCamPreview}
-                      className="rounded bg-white/85 px-2 py-1 text-xs border border-slate-200 shadow-sm"
-                    >
-                      再撮影
-                    </button>
-                    <button
-                      type="button"
-                      onClick={stopCamera}
-                      className="rounded bg-slate-900/85 text-white px-2 py-1 text-xs shadow-sm"
-                    >
-                      撮影終了
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-600">直近の撮影プレビュー</p>
-                  <img src={camPreviewUrl} alt="カメラで撮影した画像" className="w-full rounded-lg border border-slate-200" />
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-600">選択中の写真プレビュー</p>
+                  <img src={camPreviewUrl} alt="選択した画像" className="w-full rounded-lg border border-slate-200" />
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:border-amber-400 transition"
+                  >
+                    クリアして撮り直す
+                  </button>
                 </div>
               )}
-              {camErr && <p className="text-sm text-red-700">{camErr}</p>}
             </div>
           </section>
 
@@ -399,17 +326,6 @@ export default function NewMealPage() {
                 <p className="text-xs text-slate-500 mt-1">
                   タイムゾーン：{profile?.timezone ?? 'Asia/Tokyo'}（プロフィールで変更可）
                 </p>
-              </label>
-
-              <label className="block text-sm font-medium text-slate-800">
-                アップロードから選ぶ（オプション）
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-                  className="mt-1 w-full text-sm"
-                />
-                <p className="text-xs text-slate-500 mt-1">カメラで撮影できない場合はこちらから選択。</p>
               </label>
             </div>
           </section>

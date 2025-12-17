@@ -26,6 +26,8 @@ type ProfileRow = {
   breakfast_time: string | null
   lunch_time: string | null
   dinner_time: string | null
+  wakeup_time?: string | null
+  bed_time?: string | null
 }
 
 function isDue(nowUtc: Date, timeStr: string, tz: string, windowMin = 5) {
@@ -49,7 +51,7 @@ async function runSendDue(opts: { windowMin?: number; force?: boolean } = {}) {
   // 1) profiles を取得（埋め込みなし）
   const { data: profiles, error: profErr } = await sb
     .from('profiles')
-    .select('user_id, timezone, breakfast_time, lunch_time, dinner_time')
+    .select('user_id, timezone, breakfast_time, lunch_time, dinner_time, wake_time, bed_time')
   if (profErr) return new NextResponse(profErr.message, { status: 500 })
   if (!profiles?.length) {
     return NextResponse.json({ ok: true, dueUsers: 0, sent: 0, removedInvalid: 0, now: nowUtc.toISOString() })
@@ -78,17 +80,21 @@ async function runSendDue(opts: { windowMin?: number; force?: boolean } = {}) {
 
     const tz = u.timezone || 'Asia/Tokyo'
     const localDateStr = formatInTimeZone(nowUtc, tz, 'yyyy-MM-dd')
-    const targets: Array<'breakfast' | 'lunch' | 'dinner'> = []
+    const targets: Array<'breakfast' | 'lunch' | 'dinner' | 'wake' | 'bed'> = []
 
     // ★ force のときは時刻チェックを無視して、設定があるスロット全部を送る
     if (force) {
+      if (u.wakeup_time)    targets.push('wake')
       if (u.breakfast_time) targets.push('breakfast')
       if (u.lunch_time)     targets.push('lunch')
       if (u.dinner_time)    targets.push('dinner')
+      if (u.bed_time)       targets.push('bed')
     } else {
+      if (u.wakeup_time    && isDue(nowUtc, u.wakeup_time, tz, windowMin))    targets.push('wake')
       if (u.breakfast_time && isDue(nowUtc, u.breakfast_time, tz, windowMin)) targets.push('breakfast')
       if (u.lunch_time     && isDue(nowUtc, u.lunch_time, tz, windowMin))     targets.push('lunch')
       if (u.dinner_time    && isDue(nowUtc, u.dinner_time, tz, windowMin))    targets.push('dinner')
+      if (u.bed_time       && isDue(nowUtc, u.bed_time, tz, windowMin))       targets.push('bed')
     }
 
     for (const slot of targets) {
@@ -102,11 +108,24 @@ async function runSendDue(opts: { windowMin?: number; force?: boolean } = {}) {
       }
       if (!ins.data) continue // 既に送信済み
 
-      const payload = JSON.stringify({
-        title: '食事記録のリマインド',
-        body: `そろそろ${slot === 'breakfast' ? '朝食' : slot === 'lunch' ? '昼食' : '夕食'}の記録をお願いします`,
-        url: '/meals/new'
-      })
+      let title = 'リマインド'
+      let body = ''
+      let url = '/meals/new'
+      if (slot === 'wake') {
+        title = '起床アンケートのリマインド'
+        body = '起きたら、起床アンケートを入力してください。'
+        url = '/surveys/wake'
+      } else if (slot === 'bed') {
+        title = '就寝アンケートのリマインド'
+        body = '寝る前に、就寝アンケートを入力してください。'
+        url = '/surveys/bed'
+      } else {
+        title = '食事記録のリマインド'
+        body = `そろそろ${slot === 'breakfast' ? '朝食' : slot === 'lunch' ? '昼食' : '夕食'}の記録をお願いします`
+        url = '/meals/new'
+      }
+
+      const payload = JSON.stringify({ title, body, url })
 
       for (const s of userSubs) {
         try {

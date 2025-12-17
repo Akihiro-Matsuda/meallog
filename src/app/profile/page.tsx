@@ -10,6 +10,8 @@ type Profile = {
   breakfast_time: string | null
   lunch_time: string | null
   dinner_time: string | null
+  wakeup_time?: string | null
+  bed_time?: string | null
 }
 
 function toDbTime(t: string | null): string | null {
@@ -33,6 +35,8 @@ export default function ProfilePage() {
   const [breakfast, setBreakfast] = useState('')
   const [lunch, setLunch] = useState('')
   const [dinner, setDinner] = useState('')
+  const [wakeup, setWakeup] = useState('')
+  const [bed, setBed] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
@@ -52,7 +56,7 @@ export default function ProfilePage() {
       // 自分のprofiles行を取得（無ければあとでupsert）
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, timezone, breakfast_time, lunch_time, dinner_time')
+        .select('user_id, timezone, breakfast_time, lunch_time, dinner_time, wakeup_time, bed_time')
         .eq('user_id', u.id)
         .maybeSingle()
 
@@ -63,6 +67,8 @@ export default function ProfilePage() {
         setBreakfast(fromDbTime(data.breakfast_time))
         setLunch(fromDbTime(data.lunch_time))
         setDinner(fromDbTime(data.dinner_time))
+        setWakeup(fromDbTime((data as any).wakeup_time ?? null))
+        setBed(fromDbTime((data as any).bed_time ?? null))
       }
       setLoading(false)
     })()
@@ -80,6 +86,8 @@ export default function ProfilePage() {
       breakfast_time: toDbTime(breakfast),
       lunch_time: toDbTime(lunch),
       dinner_time: toDbTime(dinner),
+      wakeup_time: toDbTime(wakeup),
+      bed_time: toDbTime(bed),
     }
     const { error } = await supabase.from('profiles').upsert(payload)
     setSaving(false)
@@ -119,46 +127,77 @@ export default function ProfilePage() {
         </div>
 
         <form onSubmit={onSave} className="space-y-4 rounded-2xl border border-amber-200 bg-white/90 p-4 shadow-sm">
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-800">
-              タイムゾーン
-              <input
-                type="text"
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                placeholder="Asia/Tokyo"
-              />
-            </label>
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm space-y-2">
+              <p className="text-sm font-semibold text-slate-800">タイムゾーン</p>
+              <label className="block text-sm font-medium text-slate-800">
+                <input
+                  type="text"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                  placeholder="Asia/Tokyo"
+                />
+              </label>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <label className="block text-sm font-medium text-slate-800">
-                朝食時刻
-                <input
-                  type="time"
-                  value={breakfast}
-                  onChange={(e) => setBreakfast(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                />
-              </label>
-              <label className="block text-sm font-medium text-slate-800">
-                昼食時刻
-                <input
-                  type="time"
-                  value={lunch}
-                  onChange={(e) => setLunch(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                />
-              </label>
-              <label className="block text-sm font-medium text-slate-800">
-                夕食時刻
-                <input
-                  type="time"
-                  value={dinner}
-                  onChange={(e) => setDinner(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                />
-              </label>
+            <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm space-y-2">
+              <p className="text-sm font-semibold text-slate-800">起床・就寝の通知時刻</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block text-sm font-medium text-slate-800">
+                  起床通知時刻
+                  <input
+                    type="time"
+                    value={wakeup}
+                    onChange={(e) => setWakeup(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-800">
+                  就寝通知時刻
+                  <input
+                    type="time"
+                    value={bed}
+                    onChange={(e) => setBed(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-slate-700">未設定のスロットには通知を送りません。</p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm space-y-2">
+              <p className="text-sm font-semibold text-slate-800">食事リマインド時刻</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label className="block text-sm font-medium text-slate-800">
+                  朝食時刻
+                  <input
+                    type="time"
+                    value={breakfast}
+                    onChange={(e) => setBreakfast(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-800">
+                  昼食時刻
+                  <input
+                    type="time"
+                    value={lunch}
+                    onChange={(e) => setLunch(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-800">
+                  夕食時刻
+                  <input
+                    type="time"
+                    value={dinner}
+                    onChange={(e) => setDinner(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-slate-700">未設定の食事時間にはリマインドを送りません。</p>
             </div>
           </div>
 

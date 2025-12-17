@@ -99,6 +99,14 @@ export default function NotificationsPage() {
     } finally { setLoading(false) }
   }
 
+  const subscribed = !!sub
+
+  const permissionNote = (() => {
+    if (status === 'granted') return 'ブラウザで通知が許可されています。下の通知設定を有効にするとリマインドを受信できます。'
+    if (status === 'denied') return 'ブラウザで通知が拒否されています。ブラウザや端末の設定から通知を許可してください。'
+    return 'まだ通知許可がされていません。「通知を許可」を押して通知を許可してください。'
+  })()
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
       <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
@@ -112,15 +120,41 @@ export default function NotificationsPage() {
 
         <div className="rounded-2xl border border-amber-200 bg-white/90 p-4 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-800">現在の状態</p>
+            <p className="text-sm font-semibold text-slate-800">ブラウザの通知許可</p>
             <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">{status}</span>
+          </div>
+          <p className="text-sm text-slate-700">{permissionNote}</p>
+        </div>
+
+        <div className="rounded-2xl border border-amber-200 bg-white/90 p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-800">通知設定</p>
+            <span
+              className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                subscribed ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              {subscribed ? 'granted' : 'denied'}
+            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button onClick={subscribe} disabled={loading} className="w-full rounded-lg bg-amber-500 text-white px-3 py-3 font-semibold hover:bg-amber-600 disabled:opacity-60 transition">
+            <button
+              onClick={subscribe}
+              disabled={loading}
+              className={`w-full rounded-lg px-3 py-3 font-semibold transition ${
+                subscribed ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-slate-200 bg-white text-slate-800 hover:border-amber-400'
+              }`}
+            >
               通知を許可
             </button>
-            <button onClick={unsubscribe} disabled={loading} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 hover:border-amber-400 transition">
+            <button
+              onClick={unsubscribe}
+              disabled={loading}
+              className={`w-full rounded-lg px-3 py-3 text-sm font-semibold transition ${
+                !subscribed ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-slate-200 bg-white text-slate-800 hover:border-amber-400'
+              }`}
+            >
               通知を解除
             </button>
             <button onClick={sendTest} disabled={loading || !sub} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 hover:border-amber-400 disabled:opacity-60 transition">
