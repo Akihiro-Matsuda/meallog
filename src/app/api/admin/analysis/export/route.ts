@@ -43,14 +43,14 @@ export async function GET(req: Request) {
   const gate = await requireAdmin(req)
   if (gate instanceof Response) return gate // 401/403 をそのまま返す
 
-  const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
   const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!URL || !SRK) {
+  if (!SB_URL || !SRK) {
     return new NextResponse('Supabase env missing', { status: 500 })
   }
 
   // 各リクエストごとに service-role クライアントを生成（トップレベル評価を避ける）
-  const admin = createClient(URL, SRK, { auth: { persistSession: false } })
+  const admin = createClient(SB_URL, SRK, { auth: { persistSession: false } })
 
   const url = new URL(req.url)
   const start = url.searchParams.get('start') // 'YYYY-MM-DD' 省略可

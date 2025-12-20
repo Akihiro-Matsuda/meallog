@@ -2,12 +2,12 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function SignInPage() {
+function SignInInner() {
   const router = useRouter()
   const params = useSearchParams()
   const redirect = params.get('redirect') || '/'
@@ -132,7 +132,7 @@ export default function SignInPage() {
                 {[0, 1, 2, 3, 4, 5].map((i) => (
                   <input
                     key={i}
-                    ref={(el) => (inputsRef.current[i] = el)}
+                    ref={(el) => { inputsRef.current[i] = el }}
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -169,5 +169,13 @@ export default function SignInPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading…</div>}>
+      <SignInInner />
+    </Suspense>
   )
 }

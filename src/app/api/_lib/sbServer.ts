@@ -29,7 +29,5 @@ export async function getServerSupabase() {
     },
   }
 
-  // ←←← この1行が“直前に足す”コメント（取り消し線の抑止用）→→→
-  /* @ts-expect-error -- Next15 cookies と @supabase/ssr の型差を明示的に許容（実行は問題なし） */
   return createServerClient(URL, ANON, { cookies: adapter })
 }
