@@ -23,10 +23,8 @@ function SignInInner() {
     e.preventDefault()
     setSending(true)
     setError(null)
-    const redirectTo = `${window.location.origin}/auth/callback`
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo },
     })
     setSending(false)
     if (error) {
@@ -98,7 +96,7 @@ function SignInInner() {
           <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">signin</p>
           <h1 className="text-2xl font-bold text-slate-900">メールでサインイン</h1>
           <p className="text-sm text-slate-600">
-            メールに届くリンクを開いてログインしてください。
+            メールに届く6桁コードを入力してログインしてください。
           </p>
         </div>
 
