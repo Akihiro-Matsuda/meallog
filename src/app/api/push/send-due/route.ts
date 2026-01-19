@@ -51,7 +51,7 @@ async function runSendDue(opts: { windowMin?: number; force?: boolean } = {}) {
   // 1) profiles を取得（埋め込みなし）
   const { data: profiles, error: profErr } = await sb
     .from('profiles')
-    .select('user_id, timezone, breakfast_time, lunch_time, dinner_time, wake_time, bed_time')
+    .select('user_id, timezone, breakfast_time, lunch_time, dinner_time, wakeup_time, bed_time')
   if (profErr) return new NextResponse(profErr.message, { status: 500 })
   if (!profiles?.length) {
     return NextResponse.json({ ok: true, dueUsers: 0, sent: 0, removedInvalid: 0, now: nowUtc.toISOString() })

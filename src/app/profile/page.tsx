@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
+import Link from 'next/link'
+import { HomeInlineButton } from '@/components/HomeInlineButton'
 
 type Profile = {
   user_id: string
@@ -107,9 +108,12 @@ export default function ProfilePage() {
     return (
       <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
         <div className="mx-auto max-w-xl px-5 py-8 space-y-4">
-          <h1 className="text-2xl font-bold text-slate-900">プロフィール設定</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-slate-900">プロフィール設定</h1>
+            <HomeInlineButton />
+          </div>
           <p className="text-sm text-slate-700">サインインしてプロフィールを管理してください。</p>
-          <Link href="/sign-in" className="block text-center rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 transition">
+          <Link href="/sign-in" className="inline-flex justify-center rounded-lg bg-amber-500 text-white px-4 py-3 font-semibold hover:bg-amber-600 transition">
             サインインへ
           </Link>
         </div>
@@ -121,8 +125,13 @@ export default function ProfilePage() {
     <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
       <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">settings</p>
-          <h1 className="text-2xl font-bold text-slate-900">プロフィール設定</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">settings</p>
+              <h1 className="text-2xl font-bold text-slate-900">プロフィール設定</h1>
+            </div>
+            <HomeInlineButton />
+          </div>
           <p className="text-sm text-slate-700">ログイン: {userEmail}</p>
         </div>
 

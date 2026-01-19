@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { HomeInlineButton } from '@/components/HomeInlineButton'
 
 export default function WakeSurvey() {
   const [mood, setMood] = useState(4)
@@ -33,8 +34,13 @@ export default function WakeSurvey() {
     <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
       <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">daily</p>
-          <h1 className="text-2xl font-bold text-slate-900">起床アンケート</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">daily</p>
+              <h1 className="text-2xl font-bold text-slate-900">起床アンケート</h1>
+            </div>
+            <HomeInlineButton />
+          </div>
           <p className="text-sm text-slate-700">起床直後の状態を簡単に教えてください。今日も元気にいきましょう。</p>
         </div>
 

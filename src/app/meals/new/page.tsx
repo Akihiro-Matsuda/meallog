@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
+import { HomeInlineButton } from '@/components/HomeInlineButton'
 
 
 type Profile = { user_id: string; timezone: string }
@@ -235,8 +236,13 @@ export default function NewMealPage() {
     <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
       <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">capture</p>
-          <h1 className="text-2xl font-bold text-slate-900">食事を記録する</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">capture</p>
+              <h1 className="text-2xl font-bold text-slate-900">食事を記録する</h1>
+            </div>
+            <HomeInlineButton />
+          </div>
           <p className="text-sm text-slate-700">食事全体が確認できるように撮影してください。カメラ起動ですぐ撮影できます。</p>
         </div>
 

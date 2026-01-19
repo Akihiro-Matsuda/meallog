@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { HomeInlineButton } from '@/components/HomeInlineButton'
 import { supabase } from '@/lib/supabaseClient'
 
 type Row = {
@@ -61,6 +62,7 @@ export default function MealsPage() {
             <h1 className="text-2xl font-bold text-slate-900">食事の記録一覧</h1>
             <p className="text-sm text-slate-600">撮影した食事を確認できます。タップで詳しく表示。</p>
           </div>
+          <HomeInlineButton />
         </div>
 
         {err && <p className="text-red-700 text-sm">{err}</p>}

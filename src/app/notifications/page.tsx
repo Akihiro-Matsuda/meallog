@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { HomeInlineButton } from '@/components/HomeInlineButton'
 
 const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
 
@@ -111,8 +112,13 @@ export default function NotificationsPage() {
     <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
       <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">settings</p>
-          <h1 className="text-2xl font-bold text-slate-900">通知設定</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">settings</p>
+              <h1 className="text-2xl font-bold text-slate-900">通知設定</h1>
+            </div>
+            <HomeInlineButton />
+          </div>
           <p className="text-sm text-slate-700">
             リマインドを受け取るために通知を許可してください。
           </p>
