@@ -40,6 +40,7 @@ export default function NotificationsPage() {
   const subscribe = async () => {
     setErr(null); setLoading(true)
     try {
+      if (sub) return
       if (!user) throw new Error('ログインが必要です')
       const perm = await Notification.requestPermission()
       if (perm !== 'granted') throw new Error('通知が許可されませんでした')
@@ -55,7 +56,7 @@ export default function NotificationsPage() {
         user_id: user.id,
         endpoint: body.endpoint,
         keys: body.keys,
-      })
+      }, { onConflict: 'endpoint' })
       if (error) throw error
     } catch (e: any) {
       setErr(e.message ?? String(e))
@@ -69,12 +70,11 @@ export default function NotificationsPage() {
     try {
       const reg = await navigator.serviceWorker.ready
       const s = await reg.pushManager.getSubscription()
-      if (s) {
-        const endpoint = s.endpoint
-        await s.unsubscribe()
-        await supabase.from('device_subscriptions').delete().eq('endpoint', endpoint)
-        setSub(null); setStatus(Notification.permission)
-      }
+      if (!s) throw new Error('購読がありません')
+      const endpoint = s.endpoint
+      await s.unsubscribe()
+      await supabase.from('device_subscriptions').delete().eq('endpoint', endpoint)
+      setSub(null); setStatus(Notification.permission)
     } catch (e: any) {
       setErr(e.message ?? String(e))
     } finally { setLoading(false) }
@@ -108,6 +108,9 @@ export default function NotificationsPage() {
     return 'まだ通知許可がされていません。「通知を許可」を押して通知を許可してください。'
   })()
 
+  const permissionLabel = status === 'granted' ? '許可済み' : status === 'denied' ? '拒否' : '未設定'
+  const subscriptionLabel = subscribed ? '購読中' : '未購読'
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
       <div className="mx-auto max-w-xl px-5 py-6 space-y-5">
@@ -127,7 +130,9 @@ export default function NotificationsPage() {
         <div className="rounded-2xl border border-amber-200 bg-white/90 p-4 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-800">ブラウザの通知許可</p>
-            <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">{status}</span>
+            <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">
+              {permissionLabel}
+            </span>
           </div>
           <p className="text-sm text-slate-700">{permissionNote}</p>
         </div>
@@ -140,25 +145,25 @@ export default function NotificationsPage() {
                 subscribed ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
               }`}
             >
-              {subscribed ? 'granted' : 'denied'}
+              {subscriptionLabel}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               onClick={subscribe}
-              disabled={loading}
+              disabled={loading || subscribed}
               className={`w-full rounded-lg px-3 py-3 font-semibold transition ${
-                subscribed ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-slate-200 bg-white text-slate-800 hover:border-amber-400'
+                subscribed ? 'border border-slate-200 bg-white text-slate-400' : 'bg-amber-500 text-white hover:bg-amber-600'
               }`}
             >
               通知を許可
             </button>
             <button
               onClick={unsubscribe}
-              disabled={loading}
+              disabled={loading || !subscribed}
               className={`w-full rounded-lg px-3 py-3 text-sm font-semibold transition ${
-                !subscribed ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-slate-200 bg-white text-slate-800 hover:border-amber-400'
+                subscribed ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-slate-200 bg-white text-slate-400'
               }`}
             >
               通知を解除
