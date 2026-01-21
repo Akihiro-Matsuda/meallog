@@ -153,8 +153,8 @@ export default function NotificationsPage() {
             <button
               onClick={subscribe}
               disabled={loading || subscribed}
-              className={`w-full rounded-lg px-3 py-3 font-semibold transition ${
-                subscribed ? 'border border-slate-200 bg-white text-slate-400' : 'bg-amber-500 text-white hover:bg-amber-600'
+              className={`w-full rounded-lg px-3 py-3 font-semibold transition disabled:cursor-default disabled:opacity-100 ${
+                subscribed ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-slate-200 bg-white text-slate-800 hover:border-amber-400'
               }`}
             >
               通知を許可
@@ -162,8 +162,8 @@ export default function NotificationsPage() {
             <button
               onClick={unsubscribe}
               disabled={loading || !subscribed}
-              className={`w-full rounded-lg px-3 py-3 text-sm font-semibold transition ${
-                subscribed ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-slate-200 bg-white text-slate-400'
+              className={`w-full rounded-lg px-3 py-3 text-sm font-semibold transition disabled:cursor-default disabled:opacity-100 ${
+                subscribed ? 'border border-slate-200 bg-white text-slate-800 hover:border-amber-400' : 'bg-amber-500 text-white hover:bg-amber-600'
               }`}
             >
               通知を解除
