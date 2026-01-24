@@ -7,8 +7,19 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { HomeInlineButton } from '@/components/HomeInlineButton'
 
 
-type Profile = { user_id: string; timezone: string }
+type Profile = {
+  user_id: string
+  timezone: string
+  breakfast_time?: string | null
+  lunch_time?: string | null
+  dinner_time?: string | null
+}
 type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink'
+type PreviewTask = {
+  imageId: number
+  file: File
+  previewPath: string
+}
 
 function looksLikeHeic(file: File) {
   const t = (file.type || '').toLowerCase()
@@ -19,6 +30,53 @@ function looksLikeHeic(file: File) {
 function formatStamp(date: Date, tz: string) {
   // "YYYYMMDD_HHmmss"
   return formatInTimeZone(date, tz, 'yyyyMMdd_HHmmss')
+}
+
+function timeToMinutes(time: string | null | undefined) {
+  if (!time) return null
+  const [hh, mm] = time.split(':')
+  if (!hh || !mm) return null
+  const h = Number.parseInt(hh, 10)
+  const m = Number.parseInt(mm, 10)
+  if (Number.isNaN(h) || Number.isNaN(m)) return null
+  return h * 60 + m
+}
+
+function localStampToMinutes(stamp: string) {
+  if (!stamp) return null
+  const [, time] = stamp.split('T')
+  if (!time) return null
+  const [hh, mm] = time.split(':')
+  if (!hh || !mm) return null
+  const h = Number.parseInt(hh, 10)
+  const m = Number.parseInt(mm, 10)
+  if (Number.isNaN(h) || Number.isNaN(m)) return null
+  return h * 60 + m
+}
+
+function pickSlotByTimes(t: number, b: number, l: number, d: number): MealSlot {
+  const windowMin = 120
+  const diff = (a: number, b: number) => {
+    const raw = Math.abs(a - b)
+    return Math.min(raw, 1440 - raw)
+  }
+  const inWindow = (t: number, center: number) => {
+    const start = (center - windowMin + 1440) % 1440
+    const end = (center + windowMin) % 1440
+    if (start < end) return t >= start && t < end
+    return t >= start || t < end
+  }
+  const candidates: Array<{ slot: MealSlot; delta: number }> = []
+  if (inWindow(t, b)) candidates.push({ slot: 'breakfast', delta: diff(t, b) })
+  if (inWindow(t, l)) candidates.push({ slot: 'lunch', delta: diff(t, l) })
+  if (inWindow(t, d)) candidates.push({ slot: 'dinner', delta: diff(t, d) })
+  if (!candidates.length) return 'snack'
+  const order: MealSlot[] = ['breakfast', 'lunch', 'dinner']
+  candidates.sort((a, b) => {
+    if (a.delta !== b.delta) return a.delta - b.delta
+    return order.indexOf(a.slot) - order.indexOf(b.slot)
+  })
+  return candidates[0].slot
 }
 
 async function readExifDate(file: File): Promise<Date | null> {
@@ -78,12 +136,16 @@ export default function NewMealPage() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [mealSlot, setMealSlot] = useState<MealSlot>('breakfast')
+  const [slotTouched, setSlotTouched] = useState(false)
   const [takenLocal, setTakenLocal] = useState<string>('') // "YYYY-MM-DDTHH:MM"
+  const [note, setNote] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [camPreviewUrl, setCamPreviewUrl] = useState<string | null>(null)
+  const previewQueueRef = useRef<PreviewTask[]>([])
+  const previewProcessingRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -96,7 +158,7 @@ export default function NewMealPage() {
 
       const { data: p, error } = await supabase
         .from('profiles')
-        .select('user_id, timezone')
+        .select('user_id, timezone, breakfast_time, lunch_time, dinner_time')
         .eq('user_id', cu.id)
         .maybeSingle()
       if (error) setErr(error.message)
@@ -112,6 +174,16 @@ export default function NewMealPage() {
       setTakenLocal(`${yyyy}-${mm}-${dd}T${hh}:${mi}`)
     })()
   }, [])
+
+  useEffect(() => {
+    if (!profile || slotTouched) return
+    const t = localStampToMinutes(takenLocal)
+    const b = timeToMinutes(profile.breakfast_time)
+    const l = timeToMinutes(profile.lunch_time)
+    const d = timeToMinutes(profile.dinner_time)
+    if (t === null || b === null || l === null || d === null) return
+    setMealSlot(pickSlotByTimes(t, b, l, d))
+  }, [profile, slotTouched, takenLocal])
 
   const onFileChange = async (f: File | null) => {
     setFile(f)
@@ -141,8 +213,44 @@ export default function NewMealPage() {
       return null
     })
     setFile(null)
+    setSlotTouched(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (cameraInputRef.current) cameraInputRef.current.value = ''
+  }
+
+  const processPreviewQueue = async () => {
+    if (previewProcessingRef.current) return
+    previewProcessingRef.current = true
+    const queue = previewQueueRef.current
+    while (queue.length) {
+      const task = queue.shift()
+      if (!task) continue
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const previewBlob = await toJpegPreview(task.file, 1024, 0.8)
+          const up = await supabase.storage
+            .from('meal-images')
+            .upload(task.previewPath, previewBlob, { cacheControl: '3600', upsert: false })
+          if (up.error) throw up.error
+          const { error: updErr } = await supabase
+            .from('meal_images')
+            .update({ preview_path: task.previewPath })
+            .eq('id', task.imageId)
+          if (updErr) throw updErr
+          break
+        } catch {
+          if (attempt < 2) {
+            await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)))
+          }
+        }
+      }
+    }
+    previewProcessingRef.current = false
+  }
+
+  const enqueuePreview = (task: PreviewTask) => {
+    previewQueueRef.current.push(task)
+    void processPreviewQueue()
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -169,13 +277,14 @@ export default function NewMealPage() {
           user_id: user.id,
           meal_slot: mealSlot,
           taken_at: takenAtIso,
+          note: note.trim() || null,
         })
         .select('id')
         .single()
       if (mealErr) throw mealErr
       const mealId = mealIns.id as number
 
-      // 4) 解析用JPEG（無縮小） / プレビューJPEG（縮小）
+      // 4) 解析用JPEG（無縮小）
       //    HEICなら heic2any、その他は Canvas 経由で JPEG 化
       let analysisBlob: Blob
       if (looksLikeHeic(file)) {
@@ -183,8 +292,7 @@ export default function NewMealPage() {
         analysisBlob = (await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })) as Blob
       } else {
         analysisBlob = await toJpeg(file, 0.9)
-    }
-      const previewBlob = await toJpegPreview(file, 1024, 0.8)
+      }
 
       // 5) ファイル名は撮影時刻ベース
       const dateForName = exifDate ?? new Date(takenLocal)
@@ -198,19 +306,20 @@ export default function NewMealPage() {
       const analysisPath = `${user.id}/${mealId}/${Date.now()}_${safeAnalysis}`
       const previewPath  = `${user.id}/${mealId}/${Date.now()}_${safePreview}`
 
-      // 6) アップロード
+      // 6) 解析画像をアップロード
       const up1 = await supabase.storage.from('meal-images').upload(analysisPath, analysisBlob, { cacheControl: '3600', upsert: false })
       if (up1.error) throw up1.error
-      const up2 = await supabase.storage.from('meal-images').upload(previewPath,  previewBlob,  { cacheControl: '3600', upsert: false })
-      if (up2.error) throw up2.error
 
-      // 7) DB にパスを保存
-      const { error: imgErr } = await supabase
+      // 7) DB に保存（プレビューは後で更新）
+      const { data: imgIns, error: imgErr } = await supabase
         .from('meal_images')
-        .insert({ meal_id: mealId, storage_path: analysisPath, preview_path: previewPath })
+        .insert({ meal_id: mealId, storage_path: analysisPath, preview_path: null })
         .select('id')
         .single()
       if (imgErr) throw imgErr
+
+      // 8) プレビュー生成とアップロードは後回し
+      enqueuePreview({ imageId: imgIns.id as number, file, previewPath })
 
       setMsg('アップロードと保存が完了しました。解析キューに投入しました。')
     } catch (e: any) {
@@ -312,7 +421,14 @@ export default function NewMealPage() {
             <div className="space-y-3">
               <label className="block text-sm font-medium text-slate-800">
                 食事区分
-                <select value={mealSlot} onChange={(e) => setMealSlot(e.target.value as MealSlot)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 bg-white">
+                <select
+                  value={mealSlot}
+                  onChange={(e) => {
+                    setMealSlot(e.target.value as MealSlot)
+                    setSlotTouched(true)
+                  }}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 bg-white"
+                >
                   <option value="breakfast">朝食</option>
                   <option value="lunch">昼食</option>
                   <option value="dinner">夕食</option>
@@ -332,6 +448,19 @@ export default function NewMealPage() {
                 <p className="text-xs text-slate-500 mt-1">
                   タイムゾーン：{profile?.timezone ?? 'Asia/Tokyo'}（プロフィールで変更可）
                 </p>
+              </label>
+
+              <label className="block text-sm font-medium text-slate-800">
+                メモ（任意）
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="例：撮影が遅れた理由、補足情報など"
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                />
+                <p className="text-xs text-slate-500 mt-1">最大500文字まで入力できます。</p>
               </label>
             </div>
           </section>

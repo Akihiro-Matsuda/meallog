@@ -29,6 +29,7 @@ export default function WakeSurvey() {
   }
 
   const clampValue = (v: number) => Math.min(7, Math.max(1, v || 1))
+  const toSingleDigit = (value: string) => value.replace(/\D/g, '').slice(-1)
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-slate-50">
@@ -52,12 +53,16 @@ export default function WakeSurvey() {
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-3 items-center">
                 <input
-                  type="number"
+                  type="tel"
                   inputMode="numeric"
-                  min={1}
-                  max={7}
+                  pattern="[0-9]*"
+                  maxLength={1}
                   value={mood}
-                  onChange={(e) => setMood(clampValue(Number(e.target.value)))}
+                  onChange={(e) => {
+                    const next = toSingleDigit(e.target.value)
+                    if (!next) return
+                    setMood(clampValue(Number(next)))
+                  }}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-lg font-semibold text-slate-900 shadow-sm"
                 />
                 <div className="space-y-1">
@@ -91,12 +96,16 @@ export default function WakeSurvey() {
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-3 items-center">
                 <input
-                  type="number"
+                  type="tel"
                   inputMode="numeric"
-                  min={1}
-                  max={7}
+                  pattern="[0-9]*"
+                  maxLength={1}
                   value={stress}
-                  onChange={(e) => setStress(clampValue(Number(e.target.value)))}
+                  onChange={(e) => {
+                    const next = toSingleDigit(e.target.value)
+                    if (!next) return
+                    setStress(clampValue(Number(next)))
+                  }}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-lg font-semibold text-slate-900 shadow-sm"
                 />
                 <div className="space-y-1">
