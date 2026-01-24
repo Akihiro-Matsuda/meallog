@@ -29,7 +29,11 @@ export default function BedSurvey() {
   }
 
   const clampValue = (v: number) => Math.min(7, Math.max(1, v || 1))
-  const toSingleDigit = (value: string) => value.replace(/\D/g, '').slice(-1)
+  const toSingleDigit = (value: string) =>
+    value
+      .replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 65248))
+      .replace(/\D/g, '')
+      .slice(-1)
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
