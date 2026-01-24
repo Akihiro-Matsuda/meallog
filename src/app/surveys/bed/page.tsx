@@ -60,13 +60,13 @@ export default function BedSurvey() {
                   type="tel"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  maxLength={1}
                   value={mood}
                   onChange={(e) => {
                     const next = toSingleDigit(e.target.value)
                     if (!next) return
                     setMood(clampValue(Number(next)))
                   }}
+                  onFocus={(e) => e.currentTarget.select()}
                   className="rounded-lg border border-slate-600 bg-slate-900/60 px-3 py-2 text-center text-lg font-semibold text-white shadow-sm"
                 />
                 <div className="space-y-1">
@@ -103,13 +103,13 @@ export default function BedSurvey() {
                   type="tel"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  maxLength={1}
                   value={stress}
                   onChange={(e) => {
                     const next = toSingleDigit(e.target.value)
                     if (!next) return
                     setStress(clampValue(Number(next)))
                   }}
+                  onFocus={(e) => e.currentTarget.select()}
                   className="rounded-lg border border-slate-600 bg-slate-900/60 px-3 py-2 text-center text-lg font-semibold text-white shadow-sm"
                 />
                 <div className="space-y-1">
