@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { HomeInlineButton } from '@/components/HomeInlineButton'
 import { supabase } from '@/lib/supabaseClient'
 
-type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink' | 'other'
+type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink'
 type Row = {
   id: number
   meal_slot: MealSlot
@@ -21,8 +21,14 @@ const SLOT_OPTIONS: Array<{ value: MealSlot; label: string }> = [
   { value: 'dinner', label: '夕食' },
   { value: 'snack', label: '軽食' },
   { value: 'drink', label: '飲み物' },
-  { value: 'other', label: 'その他' },
 ]
+
+function normalizeMealSlot(value: unknown): MealSlot {
+  if (value === 'breakfast' || value === 'lunch' || value === 'dinner' || value === 'snack' || value === 'drink') {
+    return value
+  }
+  return 'snack'
+}
 
 export default function MealsPage() {
   const [rows, setRows] = useState<Row[]>([])
@@ -70,7 +76,7 @@ export default function MealsPage() {
 
       const rows: Row[] = (data ?? []).map((m: any) => ({
         id: m.id,
-        meal_slot: (m.meal_slot || 'other') as MealSlot,
+        meal_slot: normalizeMealSlot(m.meal_slot),
         taken_at: m.taken_at,
         image_path: m.meal_images?.[0]?.storage_path ?? null,
         preview_path: m.meal_images?.[0]?.preview_path ?? null,
