@@ -5,19 +5,54 @@ import Link from 'next/link'
 import { HomeInlineButton } from '@/components/HomeInlineButton'
 import { supabase } from '@/lib/supabaseClient'
 
+type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink' | 'other'
 type Row = {
   id: number
-  meal_slot: string
+  meal_slot: MealSlot
   taken_at: string
   image_path: string | null
   preview_path: string | null
   signed_url?: string | null
 }
 
+const SLOT_OPTIONS: Array<{ value: MealSlot; label: string }> = [
+  { value: 'breakfast', label: '朝食' },
+  { value: 'lunch', label: '昼食' },
+  { value: 'dinner', label: '夕食' },
+  { value: 'snack', label: '軽食' },
+  { value: 'drink', label: '飲み物' },
+  { value: 'other', label: 'その他' },
+]
+
 export default function MealsPage() {
   const [rows, setRows] = useState<Row[]>([])
+  const [slotDrafts, setSlotDrafts] = useState<Record<number, MealSlot>>({})
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [savingId, setSavingId] = useState<number | null>(null)
+
+  const updateMealSlot = async (mealId: number, slot: MealSlot) => {
+    setErr(null)
+    setSavingId(mealId)
+    try {
+      const { error } = await supabase
+        .from('meals')
+        .update({ meal_slot: slot })
+        .eq('id', mealId)
+      if (error) throw error
+
+      setRows((prev) => prev.map((r) => (r.id === mealId ? { ...r, meal_slot: slot } : r)))
+      setSlotDrafts((prev) => {
+        const next = { ...prev }
+        delete next[mealId]
+        return next
+      })
+    } catch (e: any) {
+      setErr(e?.message ?? String(e))
+    } finally {
+      setSavingId(null)
+    }
+  }
 
   useEffect(() => {
     ;(async () => {
@@ -31,11 +66,11 @@ export default function MealsPage() {
         .order('taken_at', { ascending: false })
         .limit(20)
 
-      if (error) { setErr(error.message); return }
+      if (error) { setErr(error.message); setLoading(false); return }
 
       const rows: Row[] = (data ?? []).map((m: any) => ({
         id: m.id,
-        meal_slot: m.meal_slot,
+        meal_slot: (m.meal_slot || 'other') as MealSlot,
         taken_at: m.taken_at,
         image_path: m.meal_images?.[0]?.storage_path ?? null,
         preview_path: m.meal_images?.[0]?.preview_path ?? null,
@@ -90,7 +125,29 @@ export default function MealsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-xs text-slate-600">
-                      <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">{r.meal_slot}</span>
+                      <span className="text-slate-500">カテゴリ</span>
+                      <select
+                        value={slotDrafts[r.id] ?? r.meal_slot}
+                        onChange={(e) => {
+                          const value = e.target.value as MealSlot
+                          setSlotDrafts((prev) => ({ ...prev, [r.id]: value }))
+                        }}
+                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                      >
+                        {SLOT_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => updateMealSlot(r.id, slotDrafts[r.id] ?? r.meal_slot)}
+                        disabled={savingId === r.id || (slotDrafts[r.id] ?? r.meal_slot) === r.meal_slot}
+                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:border-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        {savingId === r.id ? '保存中…' : '保存'}
+                      </button>
                       <span className="text-slate-500">#{r.id}</span>
                     </div>
                     <div className="font-semibold text-slate-900 truncate mt-1">

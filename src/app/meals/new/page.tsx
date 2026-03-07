@@ -258,8 +258,9 @@ export default function NewMealPage() {
     setMsg(null); setErr(null)
     if (!user) return setErr('ログインが必要です。')
     if (!profile) return setErr('プロフィールを読み込めませんでした。')
-    if (!file) return setErr('画像ファイルを選択してください。')
     if (!takenLocal) return setErr('撮影日時を入力してください。')
+    const noteValue = note.trim()
+    if (!file && !noteValue) return setErr('写真がない場合は食事内容を入力してください。')
 
     try {
       setLoading(true)
@@ -268,7 +269,7 @@ export default function NewMealPage() {
       // 1) 撮影日時（ローカル→UTC）
       const utcDate = fromZonedTime(new Date(takenLocal), timezone)
       // 2) EXIF時刻（真値）を読み取り
-      const exifDate = await readExifDate(file)
+      const exifDate = file ? await readExifDate(file) : null
       // 3) meals 行を先に作成（EXIF > フォームの順で採用）
       const takenAtIso = (exifDate ?? utcDate).toISOString()
       const { data: mealIns, error: mealErr } = await supabase
@@ -277,13 +278,18 @@ export default function NewMealPage() {
           user_id: user.id,
           meal_slot: mealSlot,
           taken_at: takenAtIso,
-          note: note.trim() || null,
+          note: noteValue || null,
+          is_manual: !file,
         })
         .select('id')
         .single()
       if (mealErr) throw mealErr
       const mealId = mealIns.id as number
 
+      if (!file) {
+        setMsg('画像なしで保存しました。')
+        return
+      }
       // 4) 解析用JPEG（無縮小）
       //    HEICなら heic2any、その他は Canvas 経由で JPEG 化
       let analysisBlob: Blob
@@ -451,13 +457,13 @@ export default function NewMealPage() {
               </label>
 
               <label className="block text-sm font-medium text-slate-800">
-                メモ（任意）
+                食事内容（写真がない場合は必須）
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="例：撮影が遅れた理由、補足情報など"
+                  placeholder="例：ごはん、焼き魚、味噌汁"
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                 />
                 <p className="text-xs text-slate-500 mt-1">最大500文字まで入力できます。</p>
