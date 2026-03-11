@@ -36,6 +36,7 @@ export default function MealsPage() {
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const updateMealSlot = async (mealId: number, slot: MealSlot) => {
     setErr(null)
@@ -57,6 +58,49 @@ export default function MealsPage() {
       setErr(e?.message ?? String(e))
     } finally {
       setSavingId(null)
+    }
+  }
+
+  const deleteMeal = async (mealId: number) => {
+    setErr(null)
+    setDeletingId(mealId)
+    try {
+      const ok = window.confirm('この記録を削除します。よろしいですか？')
+      if (!ok) return
+
+      const { data: imageRows, error: imgErr } = await supabase
+        .from('meal_images')
+        .select('storage_path, preview_path')
+        .eq('meal_id', mealId)
+      if (imgErr) throw imgErr
+
+      const { data: deleted, error: delErr } = await supabase.rpc('delete_my_meal', { p_meal_id: mealId })
+      if (delErr) throw delErr
+      if (!deleted) throw new Error('削除対象が見つかりませんでした。')
+
+      const toRemove = Array.from(new Set(
+        (imageRows ?? [])
+          .flatMap((r: any) => [r.storage_path, r.preview_path])
+          .filter((v: unknown): v is string => typeof v === 'string' && v.length > 0)
+      ))
+
+      if (toRemove.length > 0) {
+        const { error: rmErr } = await supabase.storage.from('meal-images').remove(toRemove)
+        if (rmErr) {
+          console.warn('storage cleanup failed:', rmErr.message)
+        }
+      }
+
+      setRows((prev) => prev.filter((r) => r.id !== mealId))
+      setSlotDrafts((prev) => {
+        const next = { ...prev }
+        delete next[mealId]
+        return next
+      })
+    } catch (e: any) {
+      setErr(e?.message ?? String(e))
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -149,10 +193,18 @@ export default function MealsPage() {
                       <button
                         type="button"
                         onClick={() => updateMealSlot(r.id, slotDrafts[r.id] ?? r.meal_slot)}
-                        disabled={savingId === r.id || (slotDrafts[r.id] ?? r.meal_slot) === r.meal_slot}
+                        disabled={savingId === r.id || deletingId === r.id || (slotDrafts[r.id] ?? r.meal_slot) === r.meal_slot}
                         className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:border-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
                         {savingId === r.id ? '保存中…' : '保存'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteMeal(r.id)}
+                        disabled={savingId === r.id || deletingId === r.id}
+                        className="rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        {deletingId === r.id ? '削除中…' : '削除'}
                       </button>
                       <span className="text-slate-500">#{r.id}</span>
                     </div>
