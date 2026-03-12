@@ -234,19 +234,28 @@ serve(async (req) => {
         mealId = Number(imgRow?.meal_id || 0)
       }
 
+      // 削除済み meal は解析しない（論理削除対応）
+      const { data: mealRow, error: mealGetErr } = await sb
+        .from("meals")
+        .select("deleted_at")
+        .eq("id", mealId)
+        .maybeSingle()
+      if (mealGetErr) throw mealGetErr
+      if (!mealRow) throw new Error("meal not found")
+      if (mealRow.deleted_at) {
+        await sb.from("jobs").update({
+          status: "canceled",
+          payload: { ...j.payload, canceled_reason: "meal_deleted" }
+        }).eq("id", j.id)
+        continue
+      }
+
       // 2) 画像の署名URL
       const signed = await sb.storage.from("meal-images").createSignedUrl(storagePath, 600)
       if (signed.error || !signed.data?.signedUrl) throw (signed.error ?? new Error("failed to sign url"))
       const imageUrl = signed.data.signedUrl
       // 3) OpenAI（Colab仕様＋response_format）
       const payload = await callOpenAI(imageUrl)
-
-      // meals.taken_at があれば最優先、なければファイル名、最後に現在JST
-      const { data: mealRow, error: mealGetErr } = await sb
-        .from('meals')
-        .select('taken_at')
-        .eq('id', mealId)
-        .maybeSingle();
 
       // 4) 正規化＆順序固定（recordOrdered）※あなたの現行コードそのまま
       // payload は callOpenAI の戻り（空 {} の可能性あり）

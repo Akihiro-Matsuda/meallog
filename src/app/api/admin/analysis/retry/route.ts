@@ -37,6 +37,18 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ ok: false, error: imgErr?.message ?? 'image not found' }), { status: 404 })
   }
 
+  const { data: meal, error: mealErr } = await admin
+    .from('meals')
+    .select('id, deleted_at')
+    .eq('id', img.meal_id)
+    .maybeSingle()
+  if (mealErr) {
+    return new Response(JSON.stringify({ ok: false, error: mealErr.message }), { status: 500 })
+  }
+  if (!meal || meal.deleted_at) {
+    return new Response(JSON.stringify({ ok: false, error: 'meal is deleted' }), { status: 400 })
+  }
+
   const payload = { meal_id: img.meal_id, image_id: img.id, storage_path: img.storage_path }
   const { error: insErr } = await admin.from('jobs').insert({
     job_type: 'analyze_meal',

@@ -68,28 +68,9 @@ export default function MealsPage() {
       const ok = window.confirm('この記録を削除します。よろしいですか？')
       if (!ok) return
 
-      const { data: imageRows, error: imgErr } = await supabase
-        .from('meal_images')
-        .select('storage_path, preview_path')
-        .eq('meal_id', mealId)
-      if (imgErr) throw imgErr
-
       const { data: deleted, error: delErr } = await supabase.rpc('delete_my_meal', { p_meal_id: mealId })
       if (delErr) throw delErr
       if (!deleted) throw new Error('削除対象が見つかりませんでした。')
-
-      const toRemove = Array.from(new Set(
-        (imageRows ?? [])
-          .flatMap((r: any) => [r.storage_path, r.preview_path])
-          .filter((v: unknown): v is string => typeof v === 'string' && v.length > 0)
-      ))
-
-      if (toRemove.length > 0) {
-        const { error: rmErr } = await supabase.storage.from('meal-images').remove(toRemove)
-        if (rmErr) {
-          console.warn('storage cleanup failed:', rmErr.message)
-        }
-      }
 
       setRows((prev) => prev.filter((r) => r.id !== mealId))
       setSlotDrafts((prev) => {
@@ -113,6 +94,7 @@ export default function MealsPage() {
           id, meal_slot, taken_at,
           meal_images ( storage_path, preview_path )
         `)
+        .is('deleted_at', null)
         .order('taken_at', { ascending: false })
         .limit(20)
 
