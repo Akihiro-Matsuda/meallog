@@ -78,6 +78,10 @@ export default function Home() {
                   <p className="text-xs text-slate-600 mt-1">寝る前に記録</p>
                 </Link>
               </div>
+              <Link href="/surveys" className="block rounded-lg border border-slate-200 px-4 py-3 text-left hover:border-amber-400 transition">
+                <p className="text-sm font-semibold text-slate-900">アンケート状況を見る</p>
+                <p className="text-xs text-slate-600 mt-1">未回答と過去回答を確認</p>
+              </Link>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
